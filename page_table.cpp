@@ -187,3 +187,23 @@ char *page_table_get_physmem(struct page_table *pt)
 {
     return pt->physmem;
 }
+
+
+int page_table_get_page(struct page_table *pt,int frame)
+{
+    if (frame< 0 || frame >= pt->nframes)
+    {
+        cerr << "page_table_get_entry: illegal frame #" << frame << endl;
+        abort();
+    }
+
+    // *frame = pt->page_mapping[page];
+    // *bits = pt->page_bits[page];
+
+    for (int i=0;i<pt->npages;i++){
+        if(pt->page_mapping[i]==frame){
+            return i;
+        }
+    }
+    return -1;
+}

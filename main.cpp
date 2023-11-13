@@ -21,15 +21,34 @@ typedef void (*program_f)(char *data, int length);
 
 // Number of physical frames
 int nframes;
-
+int mapped_frame=0;
 // Pointer to disk for access from handlers
 struct disk *disk = nullptr;
 const char *algorithm;
 
 program_f program;
 
-int evict_page(char* algorithm,struct page_table *pt){};
+int evict_frame(const char* algorithm,struct page_table *pt){//return the evicted page in physical memory and can only be called when the frame is full
+    if (strcmp(algorithm,"rand")==0){
+        srand(static_cast<unsigned int>(time(0)));
+        int selected_frame =rand() % nframes;
+        while(pt->page_bits[page_table_get_page(pt,selected_frame)]==0)
+        {
+            selected_frame =rand() % nframes;
+        }
+        return selected_frame;
+    }
+    else{return 0;}
+}
 
+int get_free_frame(struct page_table *pt){
+    for (int i=0;i<pt->npages;i++){
+        if(pt->page_mapping[i]==0){
+            return i;
+        }
+    }
+    return -1;
+}
 
 
 // Simple handler for pages == frames
@@ -47,23 +66,68 @@ void page_fault_handler_example(struct page_table *pt, int page)
     // exit(1);
     // page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
     if(pt->page_bits[page]==0){
-
-        page_table_set_entry(pt, page, page, PROT_READ);
-        printf("before disk read\n");
-        disk_read(disk,page,pt->physmem);
+        if(mapped_frame<nframes){
+            printf("insdier non-full non-resident\n");
+            page_table_set_entry(pt, page, page%nframes, PROT_READ);
+            mapped_frame+=1;
+            printf("before disk read\n");
+            disk_read(disk,page,&pt->physmem[page*PAGE_SIZE]);
+        }
+        else{
+            printf("inside none\n");
+            int selected_frame = evict_frame(algorithm,pt);
+            cout<<"selected frame:"<<selected_frame<<endl;
+            int selected_page = page_table_get_page(pt,selected_frame);
+            cout<<"selected page:"<<selected_page<<endl;
+            if(pt->page_bits[selected_page]==(PROT_READ|PROT_WRITE)){
+                printf("RW\n");
+                disk_write(disk,selected_page,&pt->physmem[selected_frame*PAGE_SIZE]);
+                disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
+                page_table_set_entry(pt,page,selected_frame,PROT_READ);
+                page_table_set_entry(pt,selected_page,selected_frame,0);
+            }
+            else{
+                disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
+                page_table_set_entry(pt,page,selected_frame,PROT_READ);
+                page_table_set_entry(pt,selected_page,selected_frame,0);
+            }
+            
+            // disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
+        }
+        
     }
     else if (pt->page_bits[page]==PROT_READ){
-        printf("in side read handler\n");
-        page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
+        if(mapped_frame<nframes){
+            printf("in side read handler\n");
+            page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
+        }
+        else{
+            page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
+        }
+        
+        
+        // else{
+        //     int selected_frame = evict_frame(algorithm,pt);
+        //     cout<<"selected frame:"<<selected_frame<<endl;
+        //     int selected_page = page_table_get_page(pt,selected_frame);
+        //     cout<<"selected page:"<<selected_page<<endl;
+        //     page_table_set_entry(pt,page,pt->page_mapping[selected_page],PROT_READ|PROT_WRITE);
+        //     page_table_set_entry(pt,selected_page,pt->page_mapping[selected_page],0);
+        //     // disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
+        // }
     }
-    else if (pt->page_bits[page]==PROT_READ|PROT_WRITE){
-        //write a function to pick some thing to evict based on algorithm
-        int selected_page = evict_page(algorithm,pt);
-        disk_write(disk,selected_page,&pt->physmem[pt->page_mapping[selected_page]*PAGE_SIZE]);
-        disk_read(disk,page,&pt->physmem[page*PAGE_SIZE]);
-        page_table_set_entry(pt,page,pt->page_mapping[selected_page],PORT_READ);
-        page_table_set_entry(pt,selected_page,pt->page_mapping[selected_page],0)
-    }
+    // else if (pt->page_bits[page]==(PROT_READ|PROT_WRITE)){
+    //     //write a function to pick some thing to evict based on algorithm
+    //     printf("inside RW\n");
+    //     int selected_frame = evict_frame(algorithm,pt);
+    //     cout<<"selected frame:"<<selected_frame<<endl;
+    //     int selected_page = page_table_get_page(pt,selected_frame);
+    //     cout<<"selected page:"<<selected_page<<endl;
+    //     disk_write(disk,selected_page,&pt->physmem[selected_frame*PAGE_SIZE]);
+    //     disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
+    //     page_table_set_entry(pt,page,pt->page_mapping[selected_page],PROT_READ);
+    //     page_table_set_entry(pt,selected_page,pt->page_mapping[selected_page],0);
+    // }
     
 
 

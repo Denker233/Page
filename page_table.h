@@ -72,4 +72,6 @@ void page_table_print_entry(struct page_table *pt, int page);
 
 void page_table_print(struct page_table *pt);
 
+int page_table_get_page(struct page_table *pt,int frame);
+
 #endif
