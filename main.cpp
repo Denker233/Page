@@ -66,7 +66,7 @@ void page_fault_handler_example(struct page_table *pt, int page)
     // exit(1);
     // page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
     if(pt->page_bits[page]==0){
-        if(mapped_frame<nframes){
+        if(mapped_frame<nframes){//not full
             printf("insdier non-full non-resident\n");
             page_table_set_entry(pt, page, page%nframes, PROT_READ);
             mapped_frame+=1;
@@ -97,13 +97,8 @@ void page_fault_handler_example(struct page_table *pt, int page)
         
     }
     else if (pt->page_bits[page]==PROT_READ){
-        if(mapped_frame<nframes){
-            printf("in side read handler\n");
-            page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
-        }
-        else{
-            page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
-        }
+         page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
+
         
         
         // else{
