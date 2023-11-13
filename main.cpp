@@ -24,6 +24,13 @@ int nframes;
 
 // Pointer to disk for access from handlers
 struct disk *disk = nullptr;
+const char *algorithm;
+
+program_f program;
+
+int evict_page(char* algorithm,struct page_table *pt){};
+
+
 
 // Simple handler for pages == frames
 void page_fault_handler_example(struct page_table *pt, int page)
@@ -37,8 +44,30 @@ void page_fault_handler_example(struct page_table *pt, int page)
 
     // Map the page to the same frame number and set to read/write
     // TODO - Disable exit and enable page table update for example
-    exit(1);
+    // exit(1);
     // page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
+    if(pt->page_bits[page]==0){
+
+        page_table_set_entry(pt, page, page, PROT_READ);
+        printf("before disk read\n");
+        disk_read(disk,page,pt->physmem);
+    }
+    else if (pt->page_bits[page]==PROT_READ){
+        printf("in side read handler\n");
+        page_table_set_entry(pt, page, pt->page_mapping[page], PROT_READ|PROT_WRITE);
+    }
+    else if (pt->page_bits[page]==PROT_READ|PROT_WRITE){
+        //write a function to pick some thing to evict based on algorithm
+        int selected_page = evict_page(algorithm,pt);
+        disk_write(disk,selected_page,&pt->physmem[pt->page_mapping[selected_page]*PAGE_SIZE]);
+        disk_read(disk,page,&pt->physmem[page*PAGE_SIZE]);
+        page_table_set_entry(pt,page,pt->page_mapping[selected_page],PORT_READ);
+        page_table_set_entry(pt,selected_page,pt->page_mapping[selected_page],0)
+    }
+    
+
+
+
 
     // Print the page table contents
     cout << "After ----------------------------" << endl;
@@ -60,7 +89,7 @@ int main(int argc, char *argv[])
     // Parse command line arguments
     int npages = atoi(argv[1]);
     nframes = atoi(argv[2]);
-    const char *algorithm = argv[3];
+    algorithm = argv[3];
     const char *program_name = argv[4];
 
     // Validate the algorithm specified
@@ -73,7 +102,7 @@ int main(int argc, char *argv[])
     }
 
     // Validate the program specified
-    program_f program = NULL;
+    program = NULL;
     if (!strcmp(program_name, "sort"))
     {
         if (nframes < 2)
