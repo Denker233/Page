@@ -41,7 +41,7 @@ void evict_page(page_table *pt, int page, int selected_page, int selected_frame)
     pt->page_mapping[selected_page] = invalid_frame;
 }
 
-bool select_avaliable_frame(page_table *pt, int page) {
+bool try_select_avaliable_frame(page_table *pt, int page) {
     static int mapped_frame = 0;
 
     if (mapped_frame >= nframes) return false;
@@ -85,7 +85,7 @@ void page_fault_handler_rand(struct page_table *pt, int page) {
     cout << "----------------------------------" << endl;
 
     if (pt->page_bits[page] == 0) {
-        if (!select_avaliable_frame(pt, page)) {
+        if (!try_select_avaliable_frame(pt, page)) {
             printf("inside none\n");
             int selected_frame = rand() % nframes;
             cout<<"selected frame:"<<selected_frame<<endl;
