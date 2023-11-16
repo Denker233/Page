@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    //srand(static_cast<unsigned int>(time(0)));
+    srand(static_cast<unsigned int>(time(0)));
     
     // Create a page table
     //struct page_table *pt = page_table_create(npages, nframes, page_fault_handler_rand /* TODO - Replace with your handler(s)*/);
