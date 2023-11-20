@@ -27,14 +27,24 @@ const char *algorithm;
 
 program_f program;
 
+struct performance_metrics {
+    int page_fault_count = 0;
+    int disk_write_count = 0;
+    int disk_read_count = 0;
+};
+
+static performance_metrics metrics;
+
 constexpr static int invalid_frame = -1;
 
 void evict_page(page_table *pt, int page, int selected_page, int selected_frame) {
     if (pt->page_bits[selected_page]==(PROT_READ|PROT_WRITE)) {
         printf("RW\n");
+        metrics.disk_write_count += 1;
         disk_write(disk,selected_page,&pt->physmem[selected_frame*PAGE_SIZE]);
     }
 
+    metrics.disk_read_count += 1;
     disk_read(disk,page,&pt->physmem[selected_frame*PAGE_SIZE]);
     page_table_set_entry(pt,page,selected_frame,PROT_READ);
     page_table_set_entry(pt,selected_page,selected_frame, 0);
@@ -78,6 +88,7 @@ void page_fault_handler_example(struct page_table *pt, int page)
 
 void page_fault_handler_rand(struct page_table *pt, int page) {
     cout << "page fault on page #" << page << endl;
+    metrics.page_fault_count += 1;
 
     // Print the page table contents
     cout << "Before ---------------------------" << endl;
@@ -111,11 +122,13 @@ void page_fault_handler_rand(struct page_table *pt, int page) {
 
 void page_fault_handler_fifo(struct page_table *pt, int page) {
     //TODO
+    metrics.page_fault_count += 1;
     exit(1);
 }
 
 void page_fault_handler_custom(struct page_table *pt, int page) {
     //TODO
+    metrics.page_fault_count += 1;
     exit(1);
 }
 
@@ -197,6 +210,10 @@ int main(int argc, char *argv[])
     // Run the specified program
     char *virtmem = page_table_get_virtmem(pt);
     program(virtmem, npages * PAGE_SIZE);
+
+    cout << "The number of page faults: " << metrics.page_fault_count << endl;
+    cout << "The number of page disk reads: " << metrics.disk_read_count +  nframes << endl;
+    cout << "The number of page disk writes: " << metrics.disk_write_count << endl;
 
     // Clean up the page table and disk
     page_table_delete(pt);
