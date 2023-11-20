@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
     program(virtmem, npages * PAGE_SIZE);
 
     cout << "The number of page faults: " << metrics.page_fault_count << endl;
-    cout << "The number of page disk reads: " << metrics.disk_read_count +  nframes << endl;
+    cout << "The number of page disk reads: " << metrics.disk_read_count + min(nframes, npages) << endl;
     cout << "The number of page disk writes: " << metrics.disk_write_count << endl;
 
     // Clean up the page table and disk
